@@ -148,7 +148,6 @@ const Home: NextPage = () => {
                 val: Math.ceil(selectedValue / 2),
                 owner: player,
               })
-              setSelected(null)
               await publishChange(pos)
             } else {
               // If it is owned by another player check if they can capture it and capture it if they can
@@ -162,7 +161,6 @@ const Home: NextPage = () => {
                   val: selectedValue - clickedValue,
                   owner: player,
                 })
-                setSelected(null)
                 await publishChange(pos)
               }
             }
@@ -176,7 +174,6 @@ const Home: NextPage = () => {
               val: 0,
               owner: null,
             })
-            setSelected(null)
             await publishChange(pos)
           } else {
             // If the player does not own the selected square then just select the square as normal
