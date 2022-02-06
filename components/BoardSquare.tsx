@@ -18,7 +18,6 @@ const BoardSquare = (props: BoardSquareProps) => {
         textAlign: 'center',
         height: '4rem',
         backgroundColor: owner?.color,
-        //borderRadius: '1rem',
         borderStyle: 'solid',
         borderColor: selected ? 'gold' : 'white',
         borderWidth: '2px',

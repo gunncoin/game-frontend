@@ -34,6 +34,7 @@ const Home: NextPage = () => {
     )
   )
 
+  const [prevSelected, setPrevSelected] = useState<Selected | null>(null)
   const [selected, setSelected] = useState<Selected | null>(null)
 
   const [player, setPlayer] = useState<Player | null>(null)
@@ -127,6 +128,7 @@ const Home: NextPage = () => {
     return async () => {
       if (!selected) {
         // If nothing is selected, select what the user clicked on
+        setPrevSelected(null)
         setSelected({ pos, owner })
       } else {
         if (
@@ -148,6 +150,8 @@ const Home: NextPage = () => {
                 val: Math.ceil(selectedValue / 2),
                 owner: player,
               })
+              setPrevSelected(selected)
+              setSelected({ pos, owner: player })
               await publishChange(pos)
             } else {
               // If it is owned by another player check if they can capture it and capture it if they can
@@ -161,6 +165,8 @@ const Home: NextPage = () => {
                   val: selectedValue - clickedValue,
                   owner: player,
                 })
+                setPrevSelected(selected)
+                setSelected({ pos: selected.pos, owner: player })
                 await publishChange(pos)
               }
             }
@@ -174,17 +180,22 @@ const Home: NextPage = () => {
               val: 0,
               owner: null,
             })
+            setPrevSelected(null)
+            setSelected({ pos, owner: player })
             await publishChange(pos)
           } else {
             // If the player does not own the selected square then just select the square as normal
+            setPrevSelected(null)
             setSelected({ pos, owner })
           }
         } else {
           if (pos.x == selected.pos.x && pos.y == selected.pos.y) {
             // If the player clicked on the selected square deselect it
+            setPrevSelected(null)
             setSelected(null)
           } else {
             // Otherwise, just select the thing the player clicked on
+            setPrevSelected(null)
             setSelected({ pos, owner })
           }
         }
