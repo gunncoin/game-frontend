@@ -1,10 +1,11 @@
 import type { NextPage } from 'next'
 import { useState, useEffect } from 'react'
 import Router from 'next/router'
+import useWebSocket, { ReadyState } from 'react-use-websocket';
 
 import BoardSquare from '../../components/BoardSquare'
 import { Player } from '../../utils/game/types'
-import { API_URL } from '../../utils/game/constants'
+import { API_URL, WEBSOCKET_URL } from '../../utils/game/constants'
 
 export interface Position {
   x: number
@@ -37,6 +38,10 @@ const Home: NextPage = () => {
   const [player, setPlayer] = useState<Player | null>(null)
 
   const [lastUpdated, setLastupdated] = useState(0)
+
+  const {
+    lastMessage
+  } = useWebSocket(WEBSOCKET_URL);
 
   const setValues = (pos: Position, val: SquareData) => {
     setBoardValues(v => {
@@ -87,17 +92,31 @@ const Home: NextPage = () => {
   }
 
   useEffect(() => {
-    let interval = undefined
+    if (!lastMessage?.data) return;
+    console.log(lastMessage)
+    const data = JSON.parse(lastMessage.data);
+    setBoardValues(
+      data.board.map(v =>
+        v.map(a => {
+          return {
+            ...a,
+            owner: !!a.owner
+              ? {
+                  id: a.owner,
+                  color: data.users[a.owner],
+                }
+              : null,
+          }
+        })
+      )
+    )
+  }, [lastMessage])
+
+  useEffect(() => {
     ;(async () => {
       await fetchData()
-      interval = setInterval(async () => {
-        await fetchData()
-      }, 5000)
     })()
-    return () => {
-      interval && clearInterval(interval)
-    }
-  })
+  }, [])
 
   const publishChange = async (pos: Position) => {
     await fetch(
@@ -185,7 +204,7 @@ const Home: NextPage = () => {
 
   return (
     <div style={{ width: '100%' }}>
-      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center'}}>
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
         <h1 style={{ color: player?.color }}>Your Color: </h1>
         <div
           style={{
@@ -200,7 +219,7 @@ const Home: NextPage = () => {
             color: 'white',
             fontSize: '25px',
             lineHeight: '3.4rem',
-            marginLeft: "1.5%",
+            marginLeft: '1.5%',
           }}
         />
       </div>
