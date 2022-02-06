@@ -121,7 +121,6 @@ const Home: NextPage = () => {
         method: 'POST',
       }
     )
-    await fetchData()
   }
 
   const onClick = (pos: Position, owner?: Player) => {
