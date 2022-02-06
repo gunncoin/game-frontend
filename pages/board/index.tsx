@@ -93,7 +93,6 @@ const Home: NextPage = () => {
 
   useEffect(() => {
     if (!lastMessage?.data) return;
-    console.log(lastMessage)
     const data = JSON.parse(lastMessage.data);
     setBoardValues(
       data.board.map(v =>
