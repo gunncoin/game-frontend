@@ -1,11 +1,12 @@
 import type { NextPage } from 'next'
 import { useState, useEffect } from 'react'
 import Router from 'next/router'
-import useWebSocket, { ReadyState } from 'react-use-websocket';
+import useWebSocket, { ReadyState } from 'react-use-websocket'
 
 import BoardSquare from '../../components/BoardSquare'
 import { Player } from '../../utils/game/types'
 import { API_URL, WEBSOCKET_URL } from '../../utils/game/constants'
+import styles from '../../styles/Home.module.css'
 
 export interface Position {
   x: number
@@ -36,12 +37,9 @@ const Home: NextPage = () => {
   const [selected, setSelected] = useState<Selected | null>(null)
 
   const [player, setPlayer] = useState<Player | null>(null)
+  const [fetched, setFetched] = useState(false)
 
-  const [lastUpdated, setLastupdated] = useState(0)
-
-  const {
-    lastMessage
-  } = useWebSocket(WEBSOCKET_URL);
+  const { lastMessage } = useWebSocket(WEBSOCKET_URL)
 
   const setValues = (pos: Position, val: SquareData) => {
     setBoardValues(v => {
@@ -52,9 +50,6 @@ const Home: NextPage = () => {
   }
 
   const fetchData = async () => {
-    const serverLast = parseInt(await (await fetch(`${API_URL}/board/last_updated`)).json())
-    if (serverLast == lastUpdated) return
-
     const boardConfig = await (await fetch(`${API_URL}/board/config`)).json()
     const newPlayers = await (await fetch(`${API_URL}/board/users`)).json()
     const newBoard = await (await fetch(`${API_URL}/board`)).json()
@@ -88,12 +83,12 @@ const Home: NextPage = () => {
       color: newPlayers[hashedUser],
     })
 
-    setLastupdated(serverLast)
+    setFetched(true)
   }
 
   useEffect(() => {
-    if (!lastMessage?.data) return;
-    const data = JSON.parse(lastMessage.data);
+    if (!lastMessage?.data) return
+    const data = JSON.parse(lastMessage.data)
     setBoardValues(
       data.board.map(v =>
         v.map(a => {
@@ -201,6 +196,16 @@ const Home: NextPage = () => {
     }
   }
 
+  if (!fetched) {
+    return (
+      <div className={styles.container}>
+        <main className={styles.main}>
+          <h1 className={styles.title}>Loading the board...</h1>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div style={{ width: '100%' }}>
       <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
@@ -213,7 +218,7 @@ const Home: NextPage = () => {
             backgroundColor: player?.color,
             borderRadius: '1rem',
             borderStyle: 'solid',
-            borderColor: selected ? 'gold' : 'white',
+            borderColor: 'white',
             borderWidth: '2px',
             color: 'white',
             fontSize: '25px',
