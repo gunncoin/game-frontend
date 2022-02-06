@@ -1,11 +1,11 @@
-import { Position } from '../pages/board/[boardID]'
+import { Position } from '../pages/board'
 import { Player } from '../utils/game/types'
 
 interface BoardSquareProps {
   owner?: Player
   value: number
   position: Position
-  onClick: (pos: Position, owner?: Player) => () => void
+  onClick: (pos: Position, owner?: Player) => () => Promise<void>
   selected: boolean
 }
 
@@ -14,7 +14,7 @@ const BoardSquare = (props: BoardSquareProps) => {
   return (
     <div
       style={{
-        width: '4rem',
+        minWidth: '4rem',
         textAlign: 'center',
         height: '4rem',
         backgroundColor: owner?.color,

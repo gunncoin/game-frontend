@@ -1,8 +1,10 @@
 import type { NextPage } from 'next'
 import { useState, useEffect } from 'react'
+import Router from 'next/router'
 
-import BoardSquare from '../../../components/BoardSquare'
-import { Player } from '../../../utils/game/types'
+import BoardSquare from '../../components/BoardSquare'
+import { Player } from '../../utils/game/types'
+import { API_URL } from '../../utils/game/constants'
 
 export interface Position {
   x: number
@@ -32,7 +34,9 @@ const Home: NextPage = () => {
 
   const [selected, setSelected] = useState<Selected | null>(null)
 
-  const [player, setPlayer] = useState<Player | null>({ id: 1000, color: '#332222' })
+  const [player, setPlayer] = useState<Player | null>(null)
+
+  const [lastUpdated, setLastupdated] = useState(0)
 
   const setValues = (pos: Position, val: SquareData) => {
     setBoardValues(v => {
@@ -42,15 +46,73 @@ const Home: NextPage = () => {
     })
   }
 
+  const fetchData = async () => {
+    const serverLast = parseInt(await (await fetch(`${API_URL}/board/last_updated`)).json())
+    if (serverLast == lastUpdated) return
+
+    const boardConfig = await (await fetch(`${API_URL}/board/config`)).json()
+    const newPlayers = await (await fetch(`${API_URL}/board/users`)).json()
+    const newBoard = await (await fetch(`${API_URL}/board`)).json()
+    const hashedUser = await (await fetch(`${API_URL}/board/hashed_user?id=${localStorage.getItem('login')}`)).json()
+
+    if (!(hashedUser in newPlayers)) {
+      Router.push('/')
+    }
+
+    setBoardValues(
+      newBoard.map(v =>
+        v.map(a => {
+          return {
+            ...a,
+            owner: !!a.owner
+              ? {
+                  id: a.owner,
+                  color: newPlayers[a.owner],
+                }
+              : null,
+          }
+        })
+      )
+    )
+
+    setWidth(boardConfig.width)
+    setHeight(boardConfig.height)
+
+    setPlayer({
+      id: hashedUser,
+      color: newPlayers[hashedUser],
+    })
+
+    setLastupdated(serverLast)
+  }
+
   useEffect(() => {
-    setValues({ x: 0, y: 0 }, { val: 2, owner: player })
-    setValues({ x: 0, y: 1 }, { val: 2, owner: null })
-    setValues({ x: 0, y: 2 }, { val: 2, owner: { id: 1, color: '#550000' } })
-    setValues({ x: 1, y: 2 }, { val: 1, owner: { id: 1, color: '#550000' } })
-  }, [])
+    let interval = undefined
+    ;(async () => {
+      await fetchData()
+      interval = setInterval(async () => {
+        await fetchData()
+      }, 5000)
+    })()
+    return () => {
+      interval && clearInterval(interval)
+    }
+  })
+
+  const publishChange = async (pos: Position) => {
+    await fetch(
+      `${API_URL}/board/move?start=${selected.pos.y},${selected.pos.x}&end=${pos.y},${pos.x}&id=${localStorage.getItem(
+        'login'
+      )}`,
+      {
+        method: 'POST',
+      }
+    )
+    await fetchData()
+  }
 
   const onClick = (pos: Position, owner?: Player) => {
-    return () => {
+    return async () => {
       if (!selected) {
         // If nothing is selected, select what the user clicked on
         setSelected({ pos, owner })
@@ -75,6 +137,7 @@ const Home: NextPage = () => {
                 owner: player,
               })
               setSelected(null)
+              await publishChange(pos)
             } else {
               // If it is owned by another player check if they can capture it and capture it if they can
               if (selectedValue > clickedValue) {
@@ -88,6 +151,7 @@ const Home: NextPage = () => {
                   owner: player,
                 })
                 setSelected(null)
+                await publishChange(pos)
               }
             }
           } else if (player.id == selected.owner?.id && player.id == owner?.id && selectedValue == 1) {
@@ -101,6 +165,7 @@ const Home: NextPage = () => {
               owner: null,
             })
             setSelected(null)
+            await publishChange(pos)
           } else {
             // If the player does not own the selected square then just select the square as normal
             setSelected({ pos, owner })
@@ -120,19 +185,40 @@ const Home: NextPage = () => {
 
   return (
     <div style={{ width: '100%' }}>
-      {Array.from(Array(boardHeight).keys()).map(y => (
-        <div style={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
-          {Array.from(Array(boardWidth).keys()).map(x => (
-            <BoardSquare
-              value={boardValues[y][x].val}
-              position={{ x: x, y: y }}
-              onClick={onClick}
-              selected={selected && x == selected.pos.x && y == selected.pos.y}
-              owner={boardValues[y][x].owner}
-            />
-          ))}
-        </div>
-      ))}
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center'}}>
+        <h1 style={{ color: player?.color }}>Your Color: </h1>
+        <div
+          style={{
+            width: '4rem',
+            textAlign: 'center',
+            height: '4rem',
+            backgroundColor: player?.color,
+            borderRadius: '1rem',
+            borderStyle: 'solid',
+            borderColor: selected ? 'gold' : 'white',
+            borderWidth: '2px',
+            color: 'white',
+            fontSize: '25px',
+            lineHeight: '3.4rem',
+            marginLeft: "1.5%",
+          }}
+        />
+      </div>
+      <div style={{ width: '100%' }}>
+        {Array.from(Array(boardHeight).keys()).map(y => (
+          <div style={{ display: 'flex', flexDirection: 'row', minWidth: '100%' }}>
+            {Array.from(Array(boardWidth).keys()).map(x => (
+              <BoardSquare
+                value={boardValues[y][x].val}
+                position={{ x: x, y: y }}
+                onClick={onClick}
+                selected={selected && x == selected.pos.x && y == selected.pos.y}
+                owner={boardValues[y][x].owner}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
